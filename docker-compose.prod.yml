@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  backend:
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW}
+      - RATE_LIMIT_MAX=${RATE_LIMIT_MAX}
+      - JOB_RETENTION_DAYS=${JOB_RETENTION_DAYS}
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS}
+      - LOG_LEVEL=${LOG_LEVEL}
+    volumes:
+      - uploads:/app/uploads
+
+  frontend:
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_ENABLE_FILE_UPLOAD=${NEXT_PUBLIC_ENABLE_FILE_UPLOAD}
+      - NEXT_PUBLIC_ENABLE_YOUTUBE_UPLOAD=${NEXT_PUBLIC_ENABLE_YOUTUBE_UPLOAD}
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads: 
