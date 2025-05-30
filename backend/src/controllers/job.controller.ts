@@ -1,22 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { JobService, JobStatus, JobType } from '../services/job.service';
 import { AppError } from '../middleware/error';
 
-const prisma = new PrismaClient();
-
 export class JobController {
+  private jobService: JobService;
+
+  constructor() {
+    this.jobService = new JobService();
+  }
+
   async createJob(req: Request, res: Response, next: NextFunction) {
     try {
-      const { videoUrl, type = 'file', metadata } = req.body;
+      const { videoUrl, type = JobType.FILE, metadata } = req.body;
 
-      const job = await prisma.job.create({
-        data: {
-          videoUrl,
-          type,
-          metadata: metadata || {},
-          status: 'PENDING',
-          screenshots: [],
-        },
+      const job = await this.jobService.createJob({
+        videoUrl,
+        type,
+        metadata,
       });
 
       return res.status(201).json({
@@ -32,9 +32,7 @@ export class JobController {
     try {
       const { id } = req.params;
 
-      const job = await prisma.job.findUnique({
-        where: { id },
-      });
+      const job = await this.jobService.getJobById(id);
 
       if (!job) {
         throw new AppError(404, 'Job not found');
@@ -52,12 +50,14 @@ export class JobController {
   async updateJob(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      const { status, resultUrl, error, screenshots, transcript, sop } = req.body;
 
-      const job = await prisma.job.update({
-        where: { id },
-        data: updateData,
-      });
+      const job = await this.jobService.updateJobStatus(
+        id,
+        status as JobStatus,
+        resultUrl,
+        error
+      );
 
       return res.json({
         status: 'success',
@@ -78,35 +78,17 @@ export class JobController {
         sortOrder = 'desc',
       } = req.query;
 
-      const skip = (Number(page) - 1) * Number(limit);
-
-      const where: Prisma.JobWhereInput = status 
-        ? { status: status as string }
-        : {};
-
-      const orderBy: Prisma.JobOrderByWithRelationInput = {
-        [sortBy as string]: sortOrder as Prisma.SortOrder,
-      };
-
-      const [jobs, total] = await Promise.all([
-        prisma.job.findMany({
-          where,
-          orderBy,
-          skip,
-          take: Number(limit),
-        }),
-        prisma.job.count({ where }),
-      ]);
+      const result = await this.jobService.listJobs({
+        status: status as JobStatus | undefined,
+        page: Number(page),
+        limit: Number(limit),
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as 'asc' | 'desc',
+      });
 
       return res.json({
         status: 'success',
-        data: jobs,
-        meta: {
-          total,
-          page: Number(page),
-          limit: Number(limit),
-          totalPages: Math.ceil(total / Number(limit)),
-        },
+        ...result,
       });
     } catch (error) {
       next(error);

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { UploadService } from '../services/upload.service';
-import { JobService } from '../services/job.service';
+import { JobService, JobType } from '../services/job.service';
 import { AppError } from '../middleware/error';
 import logger from '../utils/logger';
 
@@ -34,7 +34,7 @@ export class UploadController {
       // Create a new job for video processing
       const job = await this.jobService.createJob({
         videoUrl: filepath,
-        type: 'file',
+        type: JobType.FILE,
       });
 
       res.status(201).json({
@@ -65,7 +65,7 @@ export class UploadController {
       // Create a new job for YouTube video processing
       const job = await this.jobService.createJob({
         videoUrl: url,
-        type: 'youtube',
+        type: JobType.YOUTUBE,
       });
 
       res.status(201).json({

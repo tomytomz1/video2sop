@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
-import { JobService } from '../services/jobService';
-import { AppError } from '../utils/errorHandler';
+import { JobService, JobStatus } from '../services/job.service';
+import { AppError } from '../middleware/error';
 
 interface VideoJobData {
   jobId: string;
@@ -30,7 +30,7 @@ export class VideoWorker {
     const { jobId, videoUrl } = data;
     
     // Update job status to processing
-    await this.jobService.updateJobStatus(jobId, 'PROCESSING');
+    await this.jobService.updateJobStatus(jobId, JobStatus.PROCESSING);
 
     // TODO: Implement video processing logic
     // 1. Download video
@@ -43,12 +43,12 @@ export class VideoWorker {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Update job status to completed
-    await this.jobService.updateJobStatus(jobId, 'COMPLETED', 'https://example.com/sop.pdf');
+    await this.jobService.updateJobStatus(jobId, JobStatus.COMPLETED, 'https://example.com/sop.pdf');
   }
 
   private async handleError(jobId: string, error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    await this.jobService.updateJobStatus(jobId, 'FAILED', undefined, errorMessage);
+    await this.jobService.updateJobStatus(jobId, JobStatus.FAILED, undefined, errorMessage);
   }
 
   async close() {

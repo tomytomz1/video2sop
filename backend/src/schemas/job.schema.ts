@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import { JobStatus, JobType } from '../services/job.service';
 
 // Schema for creating a new job
 export const createJobSchema = z.object({
   body: z.object({
     videoUrl: z.string().url('Invalid video URL'),
+    type: z.nativeEnum(JobType).default(JobType.FILE),
     metadata: z.object({
       title: z.string().optional(),
       description: z.string().optional(),
@@ -26,7 +28,7 @@ export const updateJobSchema = z.object({
     id: z.string().uuid('Invalid job ID'),
   }),
   body: z.object({
-    status: z.enum(['pending', 'processing', 'completed', 'failed']).optional(),
+    status: z.nativeEnum(JobStatus).optional(),
     resultUrl: z.string().url('Invalid result URL').optional(),
     error: z.string().optional(),
     screenshots: z.array(z.string().url('Invalid screenshot URL')).optional(),
@@ -38,7 +40,7 @@ export const updateJobSchema = z.object({
 // Schema for listing jobs
 export const listJobsSchema = z.object({
   query: z.object({
-    status: z.enum(['pending', 'processing', 'completed', 'failed']).optional(),
+    status: z.nativeEnum(JobStatus).optional(),
     page: z.string().transform(Number).pipe(z.number().min(1)).optional(),
     limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).optional(),
     sortBy: z.enum(['createdAt', 'updatedAt', 'status']).optional(),

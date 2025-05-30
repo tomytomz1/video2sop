@@ -1,57 +1,51 @@
-# Build stage
-FROM node:20-alpine AS builder
+# ---- Build stage ----
+FROM node:18-bullseye-slim AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Install system dependencies for build
+RUN apt-get update && \
+    apt-get install -y openssl libssl1.1 ffmpeg python3 python3-pip && \
+    pip3 install yt-dlp && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy package files and install dependencies
 COPY package*.json ./
 COPY prisma ./prisma/
-
-# Install dependencies
 RUN npm ci
 
-# Copy source code
+# Copy the rest of the source code
 COPY . .
 
-# Generate Prisma client
+# Generate Prisma client (for the correct platform)
 RUN npx prisma generate
 
-# Build TypeScript
+# Build your app (TypeScript)
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine
+# ---- Production stage ----
+FROM node:18-bullseye-slim
 
-# Install system dependencies
-RUN apk add --no-cache \
-    ffmpeg \
-    python3 \
-    py3-pip \
-    yt-dlp
-
-# Create app directory
 WORKDIR /app
 
-# Copy package files
+# Install runtime dependencies, including OpenSSL 1.1 and yt-dlp via pip
+RUN apt-get update && \
+    apt-get install -y openssl libssl1.1 ffmpeg python3 python3-pip && \
+    pip3 install yt-dlp && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY package*.json ./
 COPY prisma ./prisma/
+RUN npm ci --omit=dev
 
-# Install production dependencies only
-RUN npm ci --only=production
-
-# Copy built files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Create uploads directory
 RUN mkdir -p uploads
 
-# Set environment variables
 ENV NODE_ENV=production
 ENV PORT=4000
 
-# Expose port
 EXPOSE 4000
 
-# Start the application
 CMD ["npm", "start"] 
