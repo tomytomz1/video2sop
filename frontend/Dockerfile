@@ -1,5 +1,5 @@
-# Build stage
-FROM node:20-alpine AS builder
+# Simple Next.js Dockerfile without standalone build
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -7,30 +7,16 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
-# Copy source code
+# Copy all source files
 COPY . .
 
-# Build application
+# Build the Next.js application
 RUN npm run build
-
-# Production stage
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=3000
-
-# Copy necessary files from builder
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
 
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["node", ".next/standalone/server.js"] 
+# Start the application using Next.js's built-in server
+CMD ["npm", "start"]
