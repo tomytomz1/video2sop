@@ -1,28 +1,43 @@
 import { Request, Response, NextFunction } from 'express';
-import { JobService, JobStatus, JobType } from '../services/job.service';
+import { JobService } from '../services/job.service';
+import { VideoWorker } from '../workers/videoWorker';
 import { AppError } from '../middleware/error';
+import logger from '../utils/logger';
 
 export class JobController {
   private jobService: JobService;
+  private videoWorker: VideoWorker;
 
   constructor() {
     this.jobService = new JobService();
+    this.videoWorker = new VideoWorker();
   }
 
   async createJob(req: Request, res: Response, next: NextFunction) {
     try {
-      const { videoUrl, type = JobType.FILE, metadata } = req.body;
+      const { videoUrl, type } = req.body;
 
-      const job = await this.jobService.createJob({
+      if (!videoUrl) {
+        throw new AppError('Video URL is required', 400);
+      }
+
+      if (!type || !['file', 'youtube'].includes(type)) {
+        throw new AppError('Type must be either "file" or "youtube"', 400);
+      }
+
+      // Create job in database
+      const job = await this.jobService.createJob(videoUrl, type);
+      logger.info(`Created new job with ID: ${job.id}`);
+
+      // Add job to processing queue
+      await this.videoWorker.addJob({
+        jobId: job.id,
         videoUrl,
-        type,
-        metadata,
+        type
       });
+      logger.info(`Added job ${job.id} to processing queue`);
 
-      return res.status(201).json({
-        status: 'success',
-        data: job,
-      });
+      res.status(201).json(job);
     } catch (error) {
       next(error);
     }
@@ -31,65 +46,32 @@ export class JobController {
   async getJob(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-
-      const job = await this.jobService.getJobById(id);
-
+      const job = await this.jobService.getJob(id);
+      
       if (!job) {
-        throw new AppError(404, 'Job not found');
+        throw new AppError('Job not found', 404);
       }
 
-      return res.json({
-        status: 'success',
-        data: job,
-      });
+      res.json(job);
     } catch (error) {
       next(error);
     }
   }
 
-  async updateJob(req: Request, res: Response, next: NextFunction) {
+  async getJobs(req: Request, res: Response, next: NextFunction) {
+    try {
+      const jobs = await this.jobService.getJobs();
+      res.json(jobs);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteJob(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { status, resultUrl, error, screenshots, transcript, sop } = req.body;
-
-      const job = await this.jobService.updateJobStatus(
-        id,
-        status as JobStatus,
-        resultUrl,
-        error
-      );
-
-      return res.json({
-        status: 'success',
-        data: job,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async listJobs(req: Request, res: Response, next: NextFunction) {
-    try {
-      const {
-        status,
-        page = 1,
-        limit = 10,
-        sortBy = 'createdAt',
-        sortOrder = 'desc',
-      } = req.query;
-
-      const result = await this.jobService.listJobs({
-        status: status as JobStatus | undefined,
-        page: Number(page),
-        limit: Number(limit),
-        sortBy: sortBy as string,
-        sortOrder: sortOrder as 'asc' | 'desc',
-      });
-
-      return res.json({
-        status: 'success',
-        ...result,
-      });
+      await this.jobService.deleteJob(id);
+      res.status(204).send();
     } catch (error) {
       next(error);
     }

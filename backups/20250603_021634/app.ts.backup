@@ -7,9 +7,6 @@ import { errorHandler } from './middleware/error';
 import jobRoutes from './routes/job.routes';
 import uploadRoutes from './routes/upload.routes';
 import logger from './utils/logger';
-import { VideoWorker } from './workers/videoWorker';
-import { setVideoWorkerInstance } from './controllers/upload.controller';
-import testRoutes from './routes/test.routes';
 
 const app = express();
 
@@ -38,35 +35,14 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/jobs', jobRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/test', testRoutes);
 
 // Error handling
 app.use(errorHandler);
-
-// Initialize video worker
-const videoWorker = new VideoWorker();
-
-// Set worker instance for upload controller
-setVideoWorkerInstance(videoWorker);
 
 // Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
-  logger.info('Video worker initialized and ready to process jobs');
 });
 
-// Handle graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received. Closing worker...');
-  await videoWorker.close();
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received. Closing worker...');
-  await videoWorker.close();
-  process.exit(0);
-});
-
-export default app;
+export default app; 

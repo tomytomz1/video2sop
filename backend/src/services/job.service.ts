@@ -1,105 +1,84 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-export enum JobStatus {
-  PENDING = 'PENDING',
-  PROCESSING = 'PROCESSING',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED'
-}
-
-export enum JobType {
-  FILE = 'file',
-  YOUTUBE = 'youtube'
-}
-
-export interface CreateJobInput {
-  videoUrl: string;
-  type: JobType;
-  metadata?: Record<string, any>;
-}
+import { PrismaClient, Job } from '@prisma/client';
+import { AppError } from '../middleware/error';
+import logger from '../utils/logger';
 
 export class JobService {
-  async getAllJobs() {
-    return prisma.job.findMany({
-      orderBy: { createdAt: 'desc' }
-    });
+  private prisma: PrismaClient;
+
+  constructor() {
+    this.prisma = new PrismaClient();
   }
 
-  async getJobById(id: string) {
-    return prisma.job.findUnique({
-      where: { id }
-    });
-  }
-
-  async createJob(input: CreateJobInput) {
-    return prisma.job.create({
-      data: {
-        videoUrl: input.videoUrl,
-        type: input.type,
-        status: JobStatus.PENDING,
-        screenshots: [],
-        metadata: input.metadata || {
-          type: input.type,
-          originalUrl: input.videoUrl,
-          status: JobStatus.PENDING,
-          lastUpdated: new Date().toISOString(),
+  async createJob(videoUrl: string, type: 'file' | 'youtube'): Promise<Job> {
+    try {
+      const job = await this.prisma.job.create({
+        data: {
+          videoUrl,
+          type: type === 'file' ? 'FILE' : 'YOUTUBE',
+          status: 'PENDING',
         },
-      }
-    });
+      });
+      logger.info(`Created new job with ID: ${job.id}`);
+      return job;
+    } catch (error) {
+      logger.error('Error creating job:', error);
+      throw new AppError('Failed to create job', 500);
+    }
   }
 
-  async updateJobStatus(id: string, status: JobStatus, resultUrl?: string, error?: string) {
-    return prisma.job.update({
-      where: { id },
-      data: {
-        status,
-        resultUrl,
-        error,
-        metadata: {
-          update: {
-            status,
-            lastUpdated: new Date().toISOString(),
-          }
-        }
-      }
-    });
+  async getJob(id: string): Promise<Job | null> {
+    try {
+      return await this.prisma.job.findUnique({
+        where: { id },
+      });
+    } catch (error) {
+      logger.error(`Error getting job ${id}:`, error);
+      throw new AppError('Failed to get job', 500);
+    }
   }
 
-  async listJobs(params: {
-    status?: JobStatus;
-    page?: number;
-    limit?: number;
-    sortBy?: string;
-    sortOrder?: Prisma.SortOrder;
-  }) {
-    const { status, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = params;
-    const skip = (page - 1) * limit;
+  async getJobs(): Promise<Job[]> {
+    try {
+      return await this.prisma.job.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (error) {
+      logger.error('Error getting jobs:', error);
+      throw new AppError('Failed to get jobs', 500);
+    }
+  }
 
-    const where: Prisma.JobWhereInput = status ? { status } : {};
-    const orderBy: Prisma.JobOrderByWithRelationInput = {
-      [sortBy]: sortOrder,
-    };
+  async updateJobStatus(
+    id: string,
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED',
+    resultUrl?: string,
+    error?: string
+  ): Promise<Job> {
+    try {
+      return await this.prisma.job.update({
+        where: { id },
+        data: {
+          status,
+          resultUrl,
+          error,
+          updatedAt: new Date(),
+        },
+      });
+    } catch (error) {
+      logger.error(`Error updating job ${id}:`, error);
+      throw new AppError('Failed to update job status', 500);
+    }
+  }
 
-    const [jobs, total] = await Promise.all([
-      prisma.job.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limit,
-      }),
-      prisma.job.count({ where }),
-    ]);
-
-    return {
-      data: jobs,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+  async deleteJob(id: string): Promise<void> {
+    try {
+      await this.prisma.job.delete({
+        where: { id },
+      });
+      logger.info(`Deleted job ${id}`);
+    } catch (error) {
+      logger.error(`Error deleting job ${id}:`, error);
+      throw new AppError('Failed to delete job', 500);
+    }
   }
 } 
