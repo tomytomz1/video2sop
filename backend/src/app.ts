@@ -32,6 +32,8 @@ app.get('/', (req, res) => {
       health: '/health',
       apiHealth: '/api/health',
       apiTest: '/api/test',
+      apiTestPing: '/api/test/ping',
+      apiTestDependencies: '/api/test/dependencies',
       jobs: '/api/jobs',
       upload: '/api/upload'
     }
@@ -57,7 +59,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Mount test routes
+// Mount test routes - This handles /api/test/* routes
 app.use('/api/test', testRoutes);
 
 // Basic Jobs endpoints (placeholder)
@@ -127,6 +129,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🌐 API docs: http://localhost:${PORT}/`);
+  console.log(`🧪 Test ping: http://localhost:${PORT}/api/test/ping`);
 });
 
 // Graceful shutdown

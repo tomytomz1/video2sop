@@ -28,20 +28,23 @@ FROM node:18-bullseye-slim
 
 WORKDIR /app
 
-# Install runtime dependencies, including OpenSSL 1.1 and yt-dlp via pip
+# Install runtime dependencies
 RUN apt-get update && \
     apt-get install -y openssl libssl1.1 ffmpeg python3 python3-pip && \
     pip3 install yt-dlp && \
     rm -rf /var/lib/apt/lists/*
 
+# Copy package files and install production dependencies
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci --omit=dev
 
+# Copy built files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-RUN mkdir -p uploads
+# Create necessary directories
+RUN mkdir -p uploads logs
 
 ENV NODE_ENV=production
 ENV PORT=4000
