@@ -14,11 +14,8 @@ app.get("/api/health", (req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
 
-// Initialize video worker
-const videoWorker = new VideoWorker({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379')
-});
+// Initialize video worker (no parameters needed)
+const videoWorker = new VideoWorker();
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
@@ -30,4 +27,4 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received. Closing worker...');
   await videoWorker.close();
   process.exit(0);
-}); 
+});

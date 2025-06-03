@@ -1,7 +1,24 @@
-import express from 'express';
+#!/usr/bin/env node
+
+const fs = require('fs');
+const { execSync } = require('child_process');
+
+console.log('🔧 Direct Backend Fix - Creating Working App...\n');
+
+function writeFile(filePath, content) {
+  const dir = require('path').dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(filePath, content, 'utf8');
+  console.log(`✅ Updated: ${filePath}`);
+}
+
+// Create a completely working app.ts with all routes inline
+console.log('1. Creating working app.ts with inline routes...');
+const workingAppContent = `import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import testRoutes from './routes/test.routes';
 
 // Load environment variables
 dotenv.config();
@@ -18,7 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Add request logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(\`\${new Date().toISOString()} - \${req.method} \${req.path}\`);
   next();
 });
 
@@ -57,8 +74,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Mount test routes
-app.use('/api/test', testRoutes);
+// Test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'API test endpoint working',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Basic Jobs endpoints (placeholder)
 app.get('/api/jobs', (req, res) => {
@@ -117,16 +139,16 @@ app.use('*', (req, res) => {
   res.status(404).json({ 
     error: 'Not found',
     path: req.originalUrl,
-    message: `Route ${req.originalUrl} not found`
+    message: \`Route \${req.originalUrl} not found\`
   });
 });
 
 // Start server
-const PORT = Number(process.env.PORT) || 4000;
+const PORT = process.env.PORT || 4000;
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🌐 API docs: http://localhost:${PORT}/`);
+  console.log(\`🚀 Server running on port \${PORT}\`);
+  console.log(\`📡 Health check: http://localhost:\${PORT}/api/health\`);
+  console.log(\`🌐 API docs: http://localhost:\${PORT}/\`);
 });
 
 // Graceful shutdown
@@ -146,4 +168,25 @@ process.on('SIGINT', () => {
   });
 });
 
-export default app;
+export default app;`;
+
+writeFile('backend/src/app.ts', workingAppContent);
+
+// Create a minimal package.json script update
+console.log('2. Updating package.json scripts...');
+const packageJsonPath = 'backend/package.json';
+if (fs.existsSync(packageJsonPath)) {
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  packageJson.main = 'dist/app.js';
+  packageJson.scripts.start = 'node dist/app.js';
+  packageJson.scripts.build = 'tsc';
+  packageJson.scripts.dev = 'ts-node-dev --respawn --transpile-only src/app.ts';
+  writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2));
+}
+
+console.log('\n✅ Direct fix applied!');
+console.log('\nNow rebuild the backend:');
+console.log('docker-compose build --no-cache backend');
+console.log('docker-compose up -d');
+console.log('\nOr test locally first:');
+console.log('cd backend && npm run build && npm start');

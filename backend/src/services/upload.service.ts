@@ -19,22 +19,22 @@ export class UploadService {
       await mkdir(UPLOAD_DIR, { recursive: true });
     } catch (error) {
       logger.error('Failed to create upload directory:', error);
-      throw new AppError(500, 'Failed to initialize upload directory');
+      throw new AppError('Failed to initialize upload directory', 500);
     }
   }
 
   async saveVideoFile(file: Express.Multer.File): Promise<string> {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      throw new AppError(400, `File size exceeds maximum limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+      throw new AppError(`File size exceeds maximum limit of ${(MAX_FILE_SIZE / (1024 * 1024)).toString()}MB`, 400);
     }
 
     // Validate file type
     if (!ALLOWED_VIDEO_TYPES.includes(file.mimetype)) {
-      throw new AppError(400, 'Invalid file type. Only MP4, MOV, AVI, and MKV files are allowed');
+      throw new AppError('Invalid file type. Only MP4, MOV, AVI, and MKV files are allowed', 400);
     }
 
-    const filename = `${Date.now()}-${file.originalname}`;
+    const filename = `${Date.now().toString()}-${file.originalname}`;
     const filepath = path.join(UPLOAD_DIR, filename);
 
     try {
@@ -43,7 +43,7 @@ export class UploadService {
       return filepath;
     } catch (error) {
       logger.error('Failed to save file:', error);
-      throw new AppError(500, 'Failed to save uploaded file');
+      throw new AppError('Failed to save uploaded file', 500);
     }
   }
 
@@ -51,4 +51,4 @@ export class UploadService {
     const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
     return youtubeRegex.test(url);
   }
-} 
+}

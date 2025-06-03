@@ -58,6 +58,32 @@ export class JobController {
     }
   }
 
+  async updateJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { status, resultUrl, error: errorMessage } = req.body;
+
+      const updatedJob = await this.jobService.updateJobStatus(id, status, resultUrl, errorMessage);
+      
+      if (!updatedJob) {
+        throw new AppError('Job not found', 404);
+      }
+
+      res.json(updatedJob);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async listJobs(req: Request, res: Response, next: NextFunction) {
+    try {
+      const jobs = await this.jobService.getJobs();
+      res.json(jobs);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getJobs(req: Request, res: Response, next: NextFunction) {
     try {
       const jobs = await this.jobService.getJobs();
@@ -76,4 +102,4 @@ export class JobController {
       next(error);
     }
   }
-} 
+}
