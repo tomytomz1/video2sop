@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import testRoutes from './routes/test.routes';
+import uploadRoutes from './routes/upload.routes';
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +63,9 @@ app.get('/api/health', (req, res) => {
 // Mount test routes - This handles /api/test/* routes
 app.use('/api/test', testRoutes);
 
+// Mount upload routes - Handles /api/upload/* endpoints
+app.use('/api/upload', uploadRoutes);
+
 // Basic Jobs endpoints (placeholder)
 app.get('/api/jobs', (req, res) => {
   res.json({ 
@@ -89,21 +93,15 @@ app.post('/api/jobs', (req, res) => {
   res.status(201).json(job);
 });
 
-// Upload endpoints (placeholder)
-app.post('/api/upload/youtube', (req, res) => {
-  const { url } = req.body;
-  
-  if (!url) {
-    return res.status(400).json({ error: 'YouTube URL is required' });
-  }
-  
-  res.json({
-    message: 'YouTube URL received',
-    url,
-    jobId: Math.random().toString(36).substr(2, 9),
-    status: 'processing'
-  });
-});
+/**
+ * @api {post} /api/upload/youtube Upload and process a YouTube video
+ * @apiName UploadYouTube
+ * @apiGroup Upload
+ * @apiDescription
+ *   Accepts a JSON body with a YouTube URL (e.g., { "url": "https://www.youtube.com/watch?v=..." }).
+ *   Validates the URL, initiates the download and processing pipeline, and responds with status and metadata.
+ *   Returns an error and HTTP error code if invalid or on failure.
+ */
 
 // Error handling
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -123,30 +121,29 @@ app.use('*', (req, res) => {
   });
 });
 
-// Start server
-const PORT = Number(process.env.PORT) || 4000;
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🌐 API docs: http://localhost:${PORT}/`);
-  console.log(`🧪 Test ping: http://localhost:${PORT}/api/test/ping`);
-});
+// Remove or comment out the server start and shutdown logic
+// const PORT = Number(process.env.PORT) || 4000;
+// const server = app.listen(PORT, '0.0.0.0', () => {
+//   console.log(`🚀 Server running on port ${PORT}`);
+//   console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
+//   console.log(`🌐 API docs: http://localhost:${PORT}/`);
+//   console.log(`🧪 Test ping: http://localhost:${PORT}/api/test/ping`);
+// });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('Server closed.');
-    process.exit(0);
-  });
-});
+// process.on('SIGTERM', () => {
+//   console.log('SIGTERM received. Shutting down gracefully...');
+//   server.close(() => {
+//     console.log('Server closed.');
+//     process.exit(0);
+//   });
+// });
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('Server closed.');
-    process.exit(0);
-  });
-});
+// process.on('SIGINT', () => {
+//   console.log('SIGINT received. Shutting down gracefully...');
+//   server.close(() => {
+//     console.log('Server closed.');
+//     process.exit(0);
+//   });
+// });
 
 export default app;

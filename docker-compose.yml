@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -33,6 +33,12 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/cookies.txt:/app/cookies.txt:ro
     environment:
       - NODE_ENV=development
       - PORT=4000
@@ -44,15 +50,7 @@ services:
       - JOB_RETENTION_DAYS=7
       - MAX_CONCURRENT_JOBS=5
       - LOG_LEVEL=debug
-    ports:
-      - "4000:4000"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-      - /app/dist
-      - /app/generated
-      - ./backend/uploads:/app/uploads
-      - ./backend/logs:/app/logs
+      - YTDLP_COOKIES_PATH=/app/cookies.txt
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,12 +61,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:4000/api
-      - NEXT_PUBLIC_ENABLE_FILE_UPLOAD=true
-      - NEXT_PUBLIC_ENABLE_YOUTUBE_UPLOAD=true
-      - WATCHPACK_POLLING=true
     ports:
       - "3000:3000"
     volumes:
@@ -76,6 +68,10 @@ services:
       - /app/node_modules
       - /app/.next
       - /app/.next/cache
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
     depends_on:
       - backend
 

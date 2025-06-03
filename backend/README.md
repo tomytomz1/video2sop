@@ -92,6 +92,74 @@ GET /api/jobs
 DELETE /api/jobs/:id
 ```
 
+## YouTube Upload API
+
+### POST /api/upload/youtube
+
+Upload and process a YouTube video by URL.
+
+**Request:**
+- Method: POST
+- URL: `/api/upload/youtube`
+- Body (JSON):
+  ```json
+  { "url": "https://www.youtube.com/watch?v=..." }
+  ```
+
+**Success Response:**
+- Status: 201
+- Body:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "jobId": "<job-id>",
+      "message": "YouTube video processing started"
+    }
+  }
+  ```
+
+**Error Responses:**
+- Status: 400 (invalid/malformed URL, unreachable video, or expired cookies)
+  ```json
+  {
+    "status": "error",
+    "message": "Invalid YouTube URL"
+  }
+  ```
+- Status: 500 (internal server error)
+  ```json
+  {
+    "status": "error",
+    "message": "Internal server error"
+  }
+  ```
+
+**Job Tracking:**
+- The response includes a `jobId` for tracking processing status.
+- Use the `/api/jobs` endpoint to check job status (future improvement).
+
+**Example curl:**
+```sh
+curl -X POST http://localhost:4000/api/upload/youtube \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw" }'
+```
+
+**Example Postman:**
+- Method: POST
+- URL: http://localhost:4000/api/upload/youtube
+- Body: raw JSON `{ "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw" }`
+- Headers: `Content-Type: application/json`
+
+**What to expect:**
+- On success: status 201, jobId, and a message.
+- On error: status 400 or 500, with a clear error message.
+
+**Next steps:**
+- Integrate Whisper for transcription in the processing pipeline.
+- Add job status and result retrieval endpoints.
+
 ## Architecture
 
 The backend service uses the following components:
@@ -107,3 +175,31 @@ The backend service uses the following components:
 ## License
 
 MIT 
+
+## Testing (End-to-End in Docker)
+
+To run the YouTube upload end-to-end test suite in the correct environment (inside the backend Docker container):
+
+### 1. Using the provided script
+```sh
+sh ./scripts/test-in-docker.sh
+```
+- This will find the running backend container and run the test suite inside it.
+- All output will be printed to your console.
+- The script returns the correct exit code for CI/CD or local use.
+
+### 2. Using npm (recommended for developers)
+```sh
+npm run test:docker
+```
+- This runs the same script as above for convenience.
+
+### Why run tests in Docker?
+- The backend expects Linux-style paths and a valid cookies.txt file at `/app/cookies.txt`.
+- Running tests on your host (Windows/Mac) may cause path or environment issues.
+- Always use the Dockerized environment for reliable, production-like test results.
+
+### Troubleshooting
+- Ensure the backend container is running (`docker-compose up backend`).
+- Ensure `cookies.txt` is present in your `backend` folder and is valid.
+- If you see errors about missing cookies or file not found, check the volume mount and container path. 

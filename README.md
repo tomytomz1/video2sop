@@ -144,3 +144,51 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - OpenAI for providing the AI models
 - FFmpeg team for video processing capabilities
 - All contributors and users of this project
+
+## YouTube Integration
+
+### Cookies Configuration
+
+Due to YouTube's anti-bot measures, the service requires authentication cookies to download videos. Follow these steps to configure cookies:
+
+1. **Export Cookies from Your Browser**
+   - Install a browser extension like "Get cookies.txt" (Chrome) or "Cookie Quick Manager" (Firefox)
+   - Go to YouTube and ensure you're logged in
+   - Use the extension to export cookies in Netscape format
+   - Save the file as `cookies.txt` in the `backend` directory
+
+2. **Configure the Service**
+   - The service will automatically look for `cookies.txt` in the backend directory
+   - Alternatively, set the `YTDLP_COOKIES_PATH` environment variable to point to your cookies file
+   - The cookies file is mounted as read-only in the container for security
+
+3. **Cookie Management**
+   - Cookies typically expire after a few days
+   - Replace the `cookies.txt` file when downloads start failing
+   - The service will validate the cookies file on startup and before each download
+   - Clear error messages will indicate if cookies are missing or invalid
+
+4. **Security Notes**
+   - Never commit your `cookies.txt` to version control
+   - Add `cookies.txt` to `.gitignore`
+   - The cookies file is mounted as read-only in the container
+   - Consider using a dedicated YouTube account for the service
+
+## Development
+
+### Prerequisites
+- Node.js 18+
+- Docker and Docker Compose
+- Python 3.x (for yt-dlp)
+- FFmpeg
+
+### Setup
+1. Clone the repository
+2. Export YouTube cookies as described above
+3. Run `docker-compose up -d`
+4. Access the frontend at http://localhost:3000
+
+### Environment Variables
+- `YTDLP_COOKIES_PATH`: Path to YouTube cookies file (default: `./cookies.txt`)
+- `UPLOAD_DIR`: Directory for video uploads (default: `./uploads`)
+- Other environment variables are documented in the respective service files

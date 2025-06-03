@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { UploadService } from '../services/upload.service';
-import { JobService } from '../services/job.service';
+import { JobService, JobType } from '../services/job.service';
 import { AppError } from '../middleware/error';
 import { VideoWorker } from '../workers/videoWorker';
 import logger from '../utils/logger';
+import { YouTubeService } from '../services/youtube.service';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -24,10 +25,12 @@ export const setVideoWorkerInstance = (worker: VideoWorker) => {
 export class UploadController {
   private uploadService: UploadService;
   private jobService: JobService;
+  private youtubeService: YouTubeService;
 
   constructor() {
     this.uploadService = new UploadService();
     this.jobService = new JobService();
+    this.youtubeService = new YouTubeService();
   }
 
   uploadVideo = upload.single('video');
@@ -40,14 +43,14 @@ export class UploadController {
 
       const filepath: string = await this.uploadService.saveVideoFile(req.file);
       // Create a new job for video processing
-      const job = await this.jobService.createJob(filepath, 'file');
+      const job = await this.jobService.createJob(filepath, 'FILE');
 
       // Add job to processing queue
       if (videoWorkerInstance) {
         await videoWorkerInstance.addJob({
           jobId: job.id,
           videoUrl: filepath,
-          type: 'file'
+          type: 'FILE'
         });
         logger.info(`Added file processing job to queue: ${job.id}`);
       } else {
@@ -71,23 +74,33 @@ export class UploadController {
       const { url }: { url: string } = req.body;
 
       if (!url) {
-        throw new AppError('YouTube URL is required', 400);
+        res.status(400).json({ status: 'error', message: 'YouTube URL is required' });
+        return;
       }
 
-      const isValid = await this.uploadService.validateYouTubeUrl(url);
-      if (!isValid) {
-        throw new AppError('Invalid YouTube URL', 400);
+      // Check if the URL is a valid YouTube URL (domain check)
+      const isValidDomain = await this.uploadService.validateYouTubeUrl(url);
+      if (!isValidDomain) {
+        res.status(400).json({ status: 'error', message: 'Invalid YouTube URL' });
+        return;
+      }
+
+      // Check if the YouTube video is reachable and valid
+      const ytValidation = await this.youtubeService.validateUrl(url);
+      if (!ytValidation.isValid) {
+        res.status(400).json({ status: 'error', message: ytValidation.error || 'Unreachable or invalid YouTube video' });
+        return;
       }
 
       // Create a new job for YouTube video processing
-      const job = await this.jobService.createJob(url, 'youtube');
+      const job = await this.jobService.createJob(url, 'YOUTUBE');
 
       // Add job to processing queue
       if (videoWorkerInstance) {
         await videoWorkerInstance.addJob({
           jobId: job.id,
           videoUrl: url,
-          type: 'youtube'
+          type: 'YOUTUBE'
         });
         logger.info(`Added YouTube processing job to queue: ${job.id}`);
       } else {

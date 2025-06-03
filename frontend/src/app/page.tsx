@@ -6,6 +6,7 @@ import { Input } from "../components/ui/input";
 import { Separator } from "../components/ui/separator";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+console.log('DEBUG: API_URL at runtime is', API_URL);
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);

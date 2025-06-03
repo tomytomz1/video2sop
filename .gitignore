@@ -64,3 +64,10 @@ next-env.d.ts
 .cache/
 .npm/
 .eslintcache
+
+# Misc
+.DS_Store
+*.pem
+
+# Project specific
+cookies.txt
