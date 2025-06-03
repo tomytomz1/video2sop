@@ -37,8 +37,6 @@ services:
       - "4000:4000"
     volumes:
       - ./backend:/app
-      - /app/node_modules
-      - ./backend/cookies.txt:/app/cookies.txt:ro
     environment:
       - NODE_ENV=development
       - PORT=4000
@@ -71,7 +69,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - NEXT_PUBLIC_API_URL=http://localhost:4000
+      - NEXT_PUBLIC_API_URL=http://localhost:4000/api
     depends_on:
       - backend
 
