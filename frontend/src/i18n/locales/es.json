@@ -1,0 +1,64 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "error": "Ocurrió un error",
+    "retry": "Reintentar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar"
+  },
+  "pwa": {
+    "install": {
+      "title": "Instalar Video2SOP",
+      "description": "Instala nuestra aplicación para una mejor experiencia. Accede rápidamente y trabaja sin conexión.",
+      "install": "Instalar",
+      "dismiss": "Ahora no",
+      "close": "Cerrar aviso de instalación"
+    }
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "register": "Registrarse",
+    "logout": "Cerrar sesión",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "resetPassword": "Restablecer contraseña",
+    "sendResetLink": "Enviar enlace de restablecimiento",
+    "backToLogin": "Volver al inicio de sesión"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "email": "Por favor, introduce un correo electrónico válido",
+    "password": "La contraseña debe tener al menos 8 caracteres",
+    "passwordMatch": "Las contraseñas deben coincidir",
+    "youtubeUrl": "Por favor, introduce una URL de YouTube válida"
+  },
+  "sop": {
+    "title": "Título",
+    "description": "Descripción",
+    "steps": "Pasos",
+    "addStep": "Añadir paso",
+    "removeStep": "Eliminar paso",
+    "save": "Guardar SOP",
+    "delete": "Eliminar SOP",
+    "edit": "Editar SOP",
+    "view": "Ver SOP",
+    "list": "Lista de SOPs",
+    "create": "Crear SOP",
+    "search": "Buscar SOPs",
+    "noResults": "No se encontraron SOPs",
+    "loading": "Cargando SOPs...",
+    "error": "Error al cargar SOPs"
+  },
+  "video": {
+    "url": "URL de YouTube",
+    "process": "Procesar video",
+    "processing": "Procesando video...",
+    "error": "Error al procesar el video",
+    "success": "Video procesado con éxito"
+  }
+} 

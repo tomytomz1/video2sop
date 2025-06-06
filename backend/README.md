@@ -202,4 +202,16 @@ npm run test:docker
 ### Troubleshooting
 - Ensure the backend container is running (`docker-compose up backend`).
 - Ensure `cookies.txt` is present in your `backend` folder and is valid.
-- If you see errors about missing cookies or file not found, check the volume mount and container path. 
+- If you see errors about missing cookies or file not found, check the volume mount and container path.
+
+## Backups
+
+Backups of uploads and exports can be created by running:
+
+```
+node scripts/backup.js
+```
+
+Backups are stored in the `/backups` directory as zip files with a timestamp.
+
+> **Note:** Database backup integration is planned for the future. For now, only file backups are included. 

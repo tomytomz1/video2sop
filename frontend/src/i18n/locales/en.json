@@ -1,0 +1,64 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close"
+  },
+  "pwa": {
+    "install": {
+      "title": "Install Video2SOP",
+      "description": "Install our app for a better experience. Get quick access and work offline.",
+      "install": "Install",
+      "dismiss": "Not now",
+      "close": "Close installation prompt"
+    }
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "resetPassword": "Reset Password",
+    "sendResetLink": "Send Reset Link",
+    "backToLogin": "Back to Login"
+  },
+  "validation": {
+    "required": "This field is required",
+    "email": "Please enter a valid email address",
+    "password": "Password must be at least 8 characters long",
+    "passwordMatch": "Passwords must match",
+    "youtubeUrl": "Please enter a valid YouTube URL"
+  },
+  "sop": {
+    "title": "Title",
+    "description": "Description",
+    "steps": "Steps",
+    "addStep": "Add Step",
+    "removeStep": "Remove Step",
+    "save": "Save SOP",
+    "delete": "Delete SOP",
+    "edit": "Edit SOP",
+    "view": "View SOP",
+    "list": "SOP List",
+    "create": "Create SOP",
+    "search": "Search SOPs",
+    "noResults": "No SOPs found",
+    "loading": "Loading SOPs...",
+    "error": "Error loading SOPs"
+  },
+  "video": {
+    "url": "YouTube URL",
+    "process": "Process Video",
+    "processing": "Processing video...",
+    "error": "Error processing video",
+    "success": "Video processed successfully"
+  }
+} 

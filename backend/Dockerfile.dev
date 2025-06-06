@@ -1,15 +1,23 @@
-FROM node:18-alpine
+FROM node:18-slim
 
 # Install dependencies
-RUN apk add --no-cache ffmpeg python3 make g++ yt-dlp
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    python3 \
+    make \
+    g++ \
+    yt-dlp \
+    libvips-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies and global tools
+RUN npm install && \
+    npm install -g ts-node typescript
 
 # Copy source code
 COPY . .

@@ -1,12 +1,30 @@
 {
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.8",
+    "@types/bull": "^3.15.9",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.4",
     "prisma": "^6.8.2",
-    "tailwindcss": "^4.1.8"
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@prisma/client": "^6.8.2"
+    "@bull-board/api": "^6.9.6",
+    "@bull-board/express": "^6.9.6",
+    "@prisma/client": "^6.8.2",
+    "@tanstack/react-query": "^5.80.6",
+    "@tanstack/react-query-devtools": "^5.80.6",
+    "@types/node-cron": "^3.0.11",
+    "@types/react-router-dom": "^5.3.3",
+    "bull": "^4.16.5",
+    "bull-board": "^1.7.2",
+    "i18next": "^25.2.1",
+    "i18next-browser-languagedetector": "^8.1.0",
+    "node-cron": "^4.1.0",
+    "puppeteer": "^24.10.0",
+    "react-hot-toast": "^2.5.2",
+    "react-i18next": "^15.5.2",
+    "vite-plugin-pwa": "^1.0.0",
+    "zod": "^3.25.51"
   }
 }

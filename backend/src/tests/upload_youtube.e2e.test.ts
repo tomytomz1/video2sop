@@ -6,6 +6,10 @@ const validShortUrl = 'https://youtu.be/jNQXAC9IVRw';
 const invalidUrl = 'https://notyoutube.com/watch?v=123';
 const malformedUrl = 'not-a-url';
 const unreachableUrl = 'https://www.youtube.com/watch?v=invalid'; // Simulate unreachable/invalid video
+const privateVideoUrl = 'https://www.youtube.com/watch?v=private123';
+const regionLockedUrl = 'https://www.youtube.com/watch?v=regionlocked123';
+const unavailableUrl = 'https://www.youtube.com/watch?v=unavailable123';
+const rateLimitedUrl = 'https://www.youtube.com/watch?v=ratelimit123';
 
 const cases = [
   {
@@ -38,13 +42,41 @@ const cases = [
     expectStatus: 400,
     expectSuccess: false,
   },
+  {
+    name: 'Private YouTube video',
+    url: privateVideoUrl,
+    expectStatus: 400,
+    expectSuccess: false,
+    expectError: 'private',
+  },
+  {
+    name: 'Region-locked YouTube video',
+    url: regionLockedUrl,
+    expectStatus: 400,
+    expectSuccess: false,
+    expectError: 'unavailable|region|blocked',
+  },
+  {
+    name: 'Unavailable YouTube video',
+    url: unavailableUrl,
+    expectStatus: 400,
+    expectSuccess: false,
+    expectError: 'unavailable',
+  },
+  {
+    name: 'Rate-limited YouTube video',
+    url: rateLimitedUrl,
+    expectStatus: 400,
+    expectSuccess: false,
+    expectError: 'unavailable|rate limit|too many requests',
+  },
 ];
 
 describe('POST /api/upload/youtube (E2E)', () => {
   let passCount = 0;
   let failCount = 0;
 
-  cases.forEach(({ name, url, expectStatus, expectSuccess }) => {
+  cases.forEach(({ name, url, expectStatus, expectSuccess, expectError }) => {
     test(name, async () => {
       const res = await request(app)
         .post('/api/upload/youtube')
@@ -60,6 +92,9 @@ describe('POST /api/upload/youtube (E2E)', () => {
           expect(res.body.data).toHaveProperty('jobId');
         } else {
           expect(res.body.status || res.body.error).toBeDefined();
+          if (expectError) {
+            expect(JSON.stringify(res.body)).toMatch(new RegExp(expectError, 'i'));
+          }
         }
         console.log('PASS');
         passCount++;

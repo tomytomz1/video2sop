@@ -3,37 +3,50 @@ import { VideoService } from '../services/video.service';
 import { YouTubeService } from '../services/youtube.service';
 import { JobService, JobType } from '../services/job.service';
 import logger from '../utils/logger';
+import { TranscriptionService } from '../services/transcription.service';
+import { SOPService } from '../services/sop.service';
+import { ScreenshotService } from '../services/screenshot.service';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import { validateEnv } from '../utils/env';
+
+const env = validateEnv();
 
 interface VideoJob {
   jobId: string;
   videoUrl: string;
-  type: JobType;
+  type: 'FILE' | 'YOUTUBE';
+  sopTemplate?: number;
 }
 
 export class VideoWorker {
   private queue: Bull.Queue;
+  private jobService: JobService;
   private videoService: VideoService;
   private youtubeService: YouTubeService;
-  private jobService: JobService;
+  private transcriptionService: TranscriptionService;
+  private sopService: SOPService;
+  private screenshotService: ScreenshotService;
+  private readonly tempDir: string;
 
   constructor() {
     this.queue = new Bull('video-processing', {
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: Number(process.env.REDIS_PORT) || 6379,
-      },
+      redis: env.REDIS_URL,
     });
-
+    this.jobService = new JobService();
     this.videoService = new VideoService();
     this.youtubeService = new YouTubeService();
-    this.jobService = new JobService();
-
+    this.transcriptionService = new TranscriptionService();
+    this.sopService = new SOPService();
+    this.screenshotService = new ScreenshotService();
+    this.tempDir = env.UPLOAD_DIR;
     this.setupQueue();
   }
 
   private setupQueue(): void {
     this.queue.process(async (job: Bull.Job<VideoJob>) => {
-      const { jobId, videoUrl, type } = job.data;
+      const { jobId, videoUrl, type, sopTemplate = 0 } = job.data;
       
       try {
         // Update job status to processing
@@ -57,10 +70,13 @@ export class VideoWorker {
             thumbnail: videoInfo.thumbnail
           });
 
-          // Download video with progress tracking
-          videoPath = await this.youtubeService.downloadVideo(videoUrl, (progress) => {
-            this.jobService.updateJobMetadata(jobId, { downloadProgress: progress });
-          });
+          // Create output path for YouTube download
+          const outputPath = path.join(this.tempDir, `${uuidv4()}.mp4`);
+          
+          // Download video
+          videoPath = await this.youtubeService.downloadVideo(videoUrl, outputPath);
+          // Update progress in metadata
+          await this.jobService.updateJobMetadata(jobId, { downloadProgress: 100 });
         } else {
           videoPath = videoUrl; // For file uploads, the path is already provided
         }
@@ -80,11 +96,58 @@ export class VideoWorker {
           size: videoInfo.size
         });
 
+        // Extract screenshots
+        const screenshots = await this.screenshotService.extractScreenshots(videoPath);
+        await this.jobService.updateJobMetadata(jobId, {
+          screenshots
+        });
+
         // Extract audio for transcription
         const audioPath = await this.videoService.extractAudio(videoPath);
         await this.jobService.updateJobMetadata(jobId, {
           audioPath
         });
+
+        // Transcribe audio
+        const { transcription } = await this.transcriptionService.transcribeAudio(audioPath);
+        
+        // Validate transcription
+        const isValidTranscription = await this.transcriptionService.validateTranscription(transcription);
+        if (!isValidTranscription) {
+          throw new Error('Invalid transcription result');
+        }
+
+        // Update job with transcription
+        await this.jobService.updateJobMetadata(jobId, {
+          transcription
+        });
+
+        // Generate SOP
+        const sop = await this.sopService.generateSOP(transcription, sopTemplate);
+        
+        // Validate SOP
+        const isValidSOP = await this.sopService.validateSOP(sop);
+        if (!isValidSOP) {
+          throw new Error('Invalid SOP result');
+        }
+
+        // Update job with SOP
+        await this.jobService.updateJobMetadata(jobId, {
+          sop
+        });
+
+        // Generate PDF from SOP
+        const sopHtml = `<html><body>${sop}</body></html>`; // You may want to improve HTML formatting
+        const pdfPath = await this.sopService.exportSOPToPDF(jobId, sopHtml);
+        await this.jobService.updateJobMetadata(jobId, {
+          pdfPath
+        });
+
+        // Clean up temporary files
+        await fs.unlink(videoPath).catch(err => logger.error('Failed to delete video file:', err));
+        await fs.unlink(audioPath).catch(err => logger.error('Failed to delete audio file:', err));
+        await this.transcriptionService.cleanupTranscription(audioPath.replace('.mp3', '.txt'));
+        await this.screenshotService.cleanupScreenshots(screenshots);
 
         // Update job status to completed
         await this.jobService.updateJobStatus(jobId, 'COMPLETED');

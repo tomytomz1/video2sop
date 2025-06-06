@@ -4,6 +4,35 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import logger from './logger';
 
+// Magic bytes for video formats
+const VIDEO_SIGNATURES = [
+  { type: 'video/mp4', bytes: [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70] }, // MP4 (common)
+  { type: 'video/mp4', bytes: [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70] }, // MP4 (variation)
+  { type: 'video/quicktime', bytes: [0x00, 0x00, 0x00, 0x14, 0x66, 0x74, 0x79, 0x70, 0x71, 0x74] }, // MOV
+  { type: 'video/x-msvideo', bytes: [0x52, 0x49, 0x46, 0x46] }, // AVI (RIFF)
+  { type: 'video/x-matroska', bytes: [0x1A, 0x45, 0xDF, 0xA3] }, // MKV
+];
+
+/**
+ * Reads the first few bytes of a file and returns the detected video type, or null if unknown.
+ */
+export async function detectVideoFileType(filePath: string): Promise<string | null> {
+  const maxLength = Math.max(...VIDEO_SIGNATURES.map(sig => sig.bytes.length));
+  const fileHandle = await fs.open(filePath, 'r');
+  try {
+    const buffer = Buffer.alloc(maxLength);
+    await fileHandle.read(buffer, 0, maxLength, 0);
+    for (const sig of VIDEO_SIGNATURES) {
+      if (buffer.slice(0, sig.bytes.length).equals(Buffer.from(sig.bytes))) {
+        return sig.type;
+      }
+    }
+    return null;
+  } finally {
+    await fileHandle.close();
+  }
+}
+
 export class VideoProcessor {
   private readonly tempDir: string;
   private readonly outputDir: string;
@@ -120,53 +149,4 @@ export class VideoProcessor {
       });
     });
   }
-
-  async extractScreenshots(videoPath: string): Promise<string[]> {
-    const screenshotDir = path.join(this.tempDir, uuidv4());
-    await fs.mkdir(screenshotDir, { recursive: true });
-
-    return new Promise((resolve, reject) => {
-      const ffmpeg = spawn('ffmpeg', [
-        '-i', videoPath,
-        '-vf', 'fps=1/60', // Take one frame every 60 seconds
-        '-frame_pts', '1',
-        path.join(screenshotDir, 'screenshot-%d.jpg')
-      ]);
-
-      ffmpeg.stdout.on('data', (data) => {
-        logger.info(`ffmpeg stdout: ${data}`);
-      });
-
-      ffmpeg.stderr.on('data', (data) => {
-        logger.error(`ffmpeg stderr: ${data}`);
-      });
-
-      ffmpeg.on('close', async (code) => {
-        if (code === 0) {
-          try {
-            const files = await fs.readdir(screenshotDir);
-            const screenshots = files
-              .filter(file => file.endsWith('.jpg'))
-              .map(file => path.join(screenshotDir, file));
-            logger.info(`Extracted ${screenshots.length} screenshots`);
-            resolve(screenshots);
-          } catch (error) {
-            reject(error);
-          }
-        } else {
-          reject(new Error(`ffmpeg process exited with code ${code}`));
-        }
-      });
-    });
-  }
-
-  async cleanup(jobId: string) {
-    try {
-      const jobDir = path.join(this.tempDir, jobId);
-      await fs.rm(jobDir, { recursive: true, force: true });
-      logger.info(`Cleaned up temporary files for job ${jobId}`);
-    } catch (error) {
-      logger.error(`Failed to cleanup job ${jobId}:`, error);
-    }
-  }
-} 
+}

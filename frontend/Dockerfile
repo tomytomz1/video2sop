@@ -1,4 +1,4 @@
-# Simple Next.js Dockerfile without standalone build
+# Next.js Dockerfile
 FROM node:20-alpine
 
 WORKDIR /app

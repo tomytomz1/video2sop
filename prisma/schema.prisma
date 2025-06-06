@@ -27,6 +27,15 @@ enum JobType {
   YOUTUBE
 }
 
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  jobs      Job[]
+}
+
 model Job {
   id          String   @id @default(uuid())
   videoUrl    String
@@ -40,8 +49,13 @@ model Job {
   transcript  String?  // Full transcript text
   sop         String?  // Generated SOP content
   metadata    Json?    // Additional metadata (type, originalUrl, status, lastUpdated, etc.)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  sessionId   String?
+  webhookUrl  String?
 
   @@index([status])
   @@index([createdAt])
   @@index([type])
+  @@index([userId])
 }

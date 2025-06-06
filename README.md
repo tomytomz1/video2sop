@@ -1,5 +1,7 @@
 # Video to SOP Converter
 
+> **Note:** All environment variables are now sourced from the root `.env` file. See `.env.example` in the project root for a template with all required keys for local, development, and production environments.
+
 Convert videos into detailed Standard Operating Procedures (SOPs) using AI.
 
 ## Features

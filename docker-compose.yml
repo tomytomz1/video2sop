@@ -1,78 +1,117 @@
+# IMPORTANT: The .env file MUST be in the project root (not in backend/ or any subfolder).
+# Docker Compose will automatically load .env from the root for all services.
+# Standard Docker Compose configuration with four core services:
+# - frontend: Next.js frontend application
+# - backend: Node.js backend API
+# - redis: Redis cache and message broker
+# - postgres: PostgreSQL database
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: video2sop
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     ports:
       - "4000:4000"
-    volumes:
-      - ./backend:/app
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=development
-      - PORT=4000
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/video2sop?schema=public
-      - REDIS_URL=redis://redis:6379
-      - CORS_ORIGIN=http://localhost:3000
-      - MAX_FILE_SIZE=104857600
-      - UPLOAD_DIR=/app/uploads
-      - JOB_RETENTION_DAYS=7
-      - MAX_CONCURRENT_JOBS=5
-      - LOG_LEVEL=debug
-      - YTDLP_COOKIES_PATH=/app/cookies.txt
+      - NODE_ENV=production
+    volumes:
+      - ./uploads:/app/uploads:rw
+      - ./backend/cookies:/app/cookies:ro
+      - ./.env:/app/.env:ro
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    user: "node"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/debug/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-      - /app/.next/cache
     environment:
-      - NODE_ENV=development
-      - PORT=3000
-      - NEXT_PUBLIC_API_URL=http://localhost:4000/api
-    depends_on:
-      - backend
+      - NEXT_PUBLIC_API_URL=${API_URL}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
   redis_data:
+    driver: local
+  postgres_data:
+    driver: local

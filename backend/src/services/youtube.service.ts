@@ -16,7 +16,7 @@ export class YouTubeService {
   constructor() {
     this.downloadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
     this.tempDir = path.join(this.downloadDir, 'temp');
-    this.cookiesPath = process.env.YTDLP_COOKIES_PATH || '/app/cookies.txt';
+    this.cookiesPath = process.env.YTDLP_COOKIES_PATH || path.join(process.cwd(), 'cookies.txt');
     this.ensureDirs().catch(error => {
       logger.error('Failed to create directories:', error);
     });
@@ -173,7 +173,29 @@ export class YouTubeService {
         '--no-cache-dir',
         '--no-write-playlist-metafiles'
       ];
-      const { stdout } = await this.executeYtDlp(args);
+      const { stdout, stderr } = await this.executeYtDlp(args);
+      // Enhanced error detection
+      if (stderr) {
+        if (/Sign in to confirm you.?re not a bot|authentication/i.test(stderr)) {
+          return { isValid: false, error: 'YouTube authentication required or cookies are invalid. Please update cookies.' };
+        }
+        if (/This video is private|Private video/.test(stderr)) {
+          return { isValid: false, error: 'This video is private' };
+        }
+        if (/This video is not available|Video unavailable/.test(stderr)) {
+          // Map to region-locked, unavailable, or rate-limited
+          if (/region|country|blocked/i.test(stderr)) {
+            return { isValid: false, error: 'This video is region-locked or blocked' };
+          }
+          if (/429|rate limit|too many requests/i.test(stderr)) {
+            return { isValid: false, error: 'YouTube rate limit reached, try again later' };
+          }
+          return { isValid: false, error: 'This video is unavailable' };
+        }
+        if (/HTTP Error 429|Too Many Requests|rate limit/i.test(stderr)) {
+          return { isValid: false, error: 'YouTube rate limit reached, try again later' };
+        }
+      }
       const videoInfo = JSON.parse(stdout);
       if (!videoInfo || !videoInfo.id) {
         logger.error('Failed to extract video information');

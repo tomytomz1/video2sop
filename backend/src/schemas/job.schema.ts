@@ -12,6 +12,7 @@ export const createJobSchema = z.object({
       duration: z.number().optional(),
       format: z.string().optional(),
     }).optional(),
+    webhookUrl: z.string().url('Invalid webhook URL').optional(),
   }),
 });
 

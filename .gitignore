@@ -34,6 +34,7 @@ yarn-error.log*
 *.swp
 *.swo
 .DS_Store
+Thumbs.db
 
 # Uploads
 uploads/
@@ -71,3 +72,16 @@ next-env.d.ts
 
 # Project specific
 cookies.txt
+logs/
+yt-dlp.exe
+*.pdf
+*.md
+*.txt
+!README.md
+!LICENSE
+!ENV_SETUP.md
+!PRD.md
+!PROJECT_CHECKLIST.md
+
+# Generated
+generated/

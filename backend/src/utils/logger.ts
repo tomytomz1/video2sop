@@ -1,6 +1,6 @@
 import winston from 'winston';
 import 'winston-daily-rotate-file';
-import path from 'path';
+import morgan from 'morgan';
 
 // Define log levels
 const levels = {
@@ -39,7 +39,7 @@ const transports = [
 
   // Error log file transport
   new winston.transports.DailyRotateFile({
-    filename: path.join('logs', 'error-%DATE%.log'),
+    filename: 'logs/error-%DATE%.log',
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
     maxSize: '20m',
@@ -49,7 +49,7 @@ const transports = [
 
   // All logs file transport
   new winston.transports.DailyRotateFile({
-    filename: path.join('logs', 'combined-%DATE%.log'),
+    filename: 'logs/combined-%DATE%.log',
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
     maxSize: '20m',
@@ -59,17 +59,37 @@ const transports = [
 
 // Create the logger instance
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   levels,
-  format,
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
   transports,
 });
 
 // Create a stream object for Morgan
 export const stream = {
   write: (message: string) => {
-    logger.http(message.trim());
+    logger.info(message.trim());
   },
 };
 
+// If we're not in production, log to the console as well
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    ),
+  }));
+}
+
+// Create a Morgan middleware instance
+export const morganMiddleware = morgan(
+  ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"',
+  { stream }
+);
+
+export { logger };
 export default logger; 
