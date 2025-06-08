@@ -22,6 +22,7 @@ services:
       - ./uploads:/app/uploads:rw
       - ./backend/cookies:/app/cookies:ro
       - ./.env:/app/.env:ro
+      - ./logs:/app/logs:rw  # Add logs volume
     depends_on:
       postgres:
         condition: service_healthy
