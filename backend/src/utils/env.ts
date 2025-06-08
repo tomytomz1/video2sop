@@ -15,7 +15,6 @@ const REQUIRED_SECRETS = [
   'JWT_SECRET',
   'FILE_ENCRYPTION_KEY',
   'ADMIN_TOKEN',
-  'BACKUP_ENCRYPTION_KEY',
 ];
 
 function validateSecrets() {
@@ -52,38 +51,38 @@ validateSecrets();
 const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().url(),
-  POSTGRES_USER: z.string(),
-  POSTGRES_PASSWORD: z.string(),
-  POSTGRES_DB: z.string(),
+  POSTGRES_USER: z.string().default('postgres'),
+  POSTGRES_PASSWORD: z.string().default('postgres'),
+  POSTGRES_DB: z.string().default('video2sop'),
   
   // Redis
   REDIS_URL: z.string().url(),
   
   // JWT
   JWT_SECRET: z.string().min(32),
-  JWT_EXPIRES_IN: z.string(),
+  JWT_EXPIRES_IN: z.string().default('7d'),
   
   // Server
-  PORT: z.string().transform(Number),
-  NODE_ENV: z.enum(['development', 'production', 'test']),
+  PORT: z.string().transform(Number).default('4000'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   
   // Storage
-  STORAGE_TYPE: z.enum(['local', 's3']),
-  STORAGE_PATH: z.string(),
+  STORAGE_TYPE: z.enum(['local', 's3']).default('local'),
+  STORAGE_PATH: z.string().default('./uploads'),
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_REGION: z.string().optional(),
   AWS_BUCKET_NAME: z.string().optional(),
   
-  // Email
-  SMTP_HOST: z.string(),
-  SMTP_PORT: z.string().transform(Number),
-  SMTP_USER: z.string(),
-  SMTP_PASS: z.string(),
-  SMTP_FROM: z.string().email(),
+  // Email (optional - only required if email features are used)
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().transform(Number).optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().email().optional(),
   
   // Security
-  CORS_ORIGIN: z.string().url(),
+  CORS_ORIGIN: z.string().url().default('http://localhost:3000'),
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).optional(),
   RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).optional(),
   AUTH_RATE_LIMIT_WINDOW_MS: z.string().transform(Number).optional(),
@@ -101,19 +100,19 @@ const envSchema = z.object({
   METRICS_RETENTION_DAYS: z.string().transform(Number).optional(),
   
   // File Upload
-  MAX_FILE_SIZE: z.string().transform(Number).pipe(z.number().positive()),
-  UPLOAD_DIR: z.string().min(1),
+  MAX_FILE_SIZE: z.string().transform(Number).pipe(z.number().positive()).default('104857600'), // 100MB
+  UPLOAD_DIR: z.string().min(1).default('./uploads'),
   FILE_ENCRYPTION_KEY: z.string().length(32, 'FILE_ENCRYPTION_KEY must be exactly 32 characters'),
   
   // Job Processing
-  JOB_RETENTION_DAYS: z.string().transform(Number).pipe(z.number().positive()),
-  MAX_CONCURRENT_JOBS: z.string().transform(Number).pipe(z.number().positive()),
+  JOB_RETENTION_DAYS: z.string().transform(Number).pipe(z.number().positive()).default('7'),
+  MAX_CONCURRENT_JOBS: z.string().transform(Number).pipe(z.number().positive()).default('5'),
   
   // Logging
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
   
   // YouTube
-  YTDLP_COOKIES_PATH: z.string().min(1),
+  YTDLP_COOKIES_PATH: z.string().min(1).default('./cookies.txt'),
   
   // OpenAI
   OPENAI_API_KEY: z.string().min(1),
@@ -127,17 +126,24 @@ const envSchema = z.object({
   // Admin
   ADMIN_TOKEN: z.string().min(32, 'ADMIN_TOKEN must be at least 32 characters long'),
   
-  // Backup
-  BACKUP_ENCRYPTION_KEY: z.string().min(32),
+  // Backup (optional)
+  BACKUP_ENCRYPTION_KEY: z.string().min(32).optional(),
 });
 
 export const validateEnv = () => {
   try {
-    return envSchema.parse(process.env);
+    const parsed = envSchema.parse(process.env);
+    
+    // Log warning if SMTP is not configured but might be needed
+    if (!parsed.SMTP_HOST && parsed.NODE_ENV === 'production') {
+      console.warn('⚠️  WARNING: SMTP is not configured. Email features will not work.');
+    }
+    
+    return parsed;
   } catch (error) {
     if (error instanceof z.ZodError) {
       const missingVars = error.errors
-        .map((err) => err.path.join('.'))
+        .map((err) => `${err.path.join('.')}: ${err.message}`)
         .join(', ');
       throw new Error(`Missing or invalid environment variables: ${missingVars}`);
     }
@@ -145,4 +151,4 @@ export const validateEnv = () => {
   }
 };
 
-export type Env = z.infer<typeof envSchema>; 
+export type Env = z.infer<typeof envSchema>;

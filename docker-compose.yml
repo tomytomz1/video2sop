@@ -1,47 +1,7 @@
-# IMPORTANT: The .env file MUST be in the project root (not in backend/ or any subfolder).
-# Docker Compose will automatically load .env from the root for all services.
-# Standard Docker Compose configuration with four core services:
-# - frontend: Next.js frontend application
-# - backend: Node.js backend API
-# - redis: Redis cache and message broker
-# - postgres: PostgreSQL database
 version: '3.8'
 
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "4000:4000"
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=production
-    volumes:
-      - ./uploads:/app/uploads:rw
-      - ./backend/cookies:/app/cookies:ro
-      - ./.env:/app/.env:ro
-      - ./logs:/app/logs:rw  # Add logs volume
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    user: "node"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 512M
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/api/debug/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-
+  # Frontend
   frontend:
     build:
       context: ./frontend
@@ -49,70 +9,88 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${API_URL}
+      - NEXT_PUBLIC_API_URL=http://backend:4000
+    depends_on:
+      - backend
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD", "wget", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.2'
-          memory: 256M
+      retries: 5
+
+  # Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: video2sop
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     restart: unless-stopped
 
+  # Redis
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.2'
-          memory: 256M
     restart: unless-stopped
 
-  postgres:
-    image: postgres:15-alpine
+  # Backend API
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/video2sop
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=development
+      - PORT=4000
+      - CORS_ORIGIN=http://localhost:3000
+      - JWT_SECRET=your-256-bit-secret-key-here
+      - FILE_ENCRYPTION_KEY=your-32-character-encryption-key
+      - ADMIN_TOKEN=your-32-character-admin-token
+      - OPENAI_API_KEY=your-openai-api-key-here
+      - MAX_FILE_SIZE=104857600
+      - JOB_RETENTION_DAYS=7
+      - MAX_CONCURRENT_JOBS=5
+      - RATE_LIMIT_WINDOW=15
+      - RATE_LIMIT_MAX=100
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+      - ./backend/cookies.txt:/app/cookies.txt:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "nc", "-z", "localhost", "4000"]
+      interval: 30s
+      timeout: 10s
       retries: 5
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
     restart: unless-stopped
 
 volumes:
-  redis_data:
-    driver: local
   postgres_data:
-    driver: local
+  redis_data:
+  backend_uploads:
+  backend_logs:
