@@ -1,6 +1,9 @@
 import Queue from 'bull';
 import { Redis } from 'ioredis';
 import { logger } from './logger';
+import { validateEnv } from '../utils/env';
+
+const env = validateEnv();
 
 // Create Redis client
 const redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
@@ -8,17 +11,17 @@ const redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379')
 // Create queues
 export const videoQueue = new Queue('video-processing', {
   redis: {
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    host: process.env.REDIS_HOST || 'localhost',
-    password: process.env.REDIS_PASSWORD,
+    port: env.REDIS_PORT || 6379,
+    host: env.REDIS_HOST || 'localhost',
+    password: env.REDIS_PASSWORD,
   },
 });
 
 export const cleanupQueue = new Queue('cleanup', {
   redis: {
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    host: process.env.REDIS_HOST || 'localhost',
-    password: process.env.REDIS_PASSWORD,
+    port: env.REDIS_PORT || 6379,
+    host: env.REDIS_HOST || 'localhost',
+    password: env.REDIS_PASSWORD,
   },
 });
 

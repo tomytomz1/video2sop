@@ -3,12 +3,16 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Always load .env from the project root
-const ROOT_ENV_PATH = path.resolve(__dirname, '../../.env');
-if (fs.existsSync(ROOT_ENV_PATH)) {
-  dotenv.config({ path: ROOT_ENV_PATH });
-} else {
-  console.warn('[env] WARNING: .env file not found at project root. Falling back to process.env only.');
+// Only load .env from disk when running locally (not in Docker/production)
+const isLocal = process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'docker';
+
+if (isLocal) {
+  const ROOT_ENV_PATH = path.resolve(__dirname, '../../.env');
+  if (fs.existsSync(ROOT_ENV_PATH)) {
+    dotenv.config({ path: ROOT_ENV_PATH });
+  } else {
+    console.warn('[env] WARNING: .env file not found at project root. Falling back to process.env only.');
+  }
 }
 
 const REQUIRED_SECRETS = [
@@ -57,6 +61,9 @@ const envSchema = z.object({
   
   // Redis
   REDIS_URL: z.string().url(),
+  REDIS_PORT: z.string().transform(Number).optional(),
+  REDIS_HOST: z.string().optional(),
+  REDIS_PASSWORD: z.string().optional(),
   
   // JWT
   JWT_SECRET: z.string().min(32),
@@ -128,6 +135,10 @@ const envSchema = z.object({
   
   // Backup (optional)
   BACKUP_ENCRYPTION_KEY: z.string().min(32).optional(),
+  
+  // Screenshot/Job Processing
+  MAX_SCREENSHOTS: z.string().transform(Number).default('10'),
+  SCREENSHOT_INTERVAL: z.string().transform(Number).default('60'),
 });
 
 export const validateEnv = () => {

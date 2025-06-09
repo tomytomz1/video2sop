@@ -5,6 +5,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { AppError } from '../middleware/error';
 import logger from '../utils/logger';
 import sharp from 'sharp';
+import { validateEnv } from '../utils/env';
+
+const env = validateEnv();
 
 export class ScreenshotService {
   private readonly tempDir: string;
@@ -15,8 +18,8 @@ export class ScreenshotService {
   constructor() {
     this.tempDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
     this.outputDir = path.join(this.tempDir, 'screenshots');
-    this.maxScreenshots = parseInt(process.env.MAX_SCREENSHOTS || '10', 10);
-    this.screenshotInterval = parseInt(process.env.SCREENSHOT_INTERVAL || '60', 10); // Default: 1 screenshot per minute
+    this.maxScreenshots = env.MAX_SCREENSHOTS;
+    this.screenshotInterval = env.SCREENSHOT_INTERVAL;
     this.ensureDirs().catch(error => {
       logger.error('Failed to create directories:', error);
     });

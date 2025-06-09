@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import logger from './logger';
+import { validateEnv } from './env';
 
 // Magic bytes for video formats
 const VIDEO_SIGNATURES = [
@@ -39,9 +40,10 @@ export class VideoProcessor {
   private readonly maxFileSize: number;
 
   constructor() {
-    this.tempDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
+    const env = validateEnv();
+    this.tempDir = env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
     this.outputDir = path.join(process.cwd(), 'output');
-    this.maxFileSize = parseInt(process.env.MAX_FILE_SIZE || '104857600', 10); // Default 100MB
+    this.maxFileSize = env.MAX_FILE_SIZE; // Already validated and a number
   }
 
   async initialize() {

@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   # Frontend
   frontend:
@@ -9,7 +8,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:4000
+      - NEXT_PUBLIC_API_URL=http://localhost:4000/api
     depends_on:
       - backend
     restart: unless-stopped
@@ -18,13 +17,12 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-
   # Database
   db:
     image: postgres:15-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: TBtb0035993!
       POSTGRES_DB: video2sop
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -36,7 +34,6 @@ services:
       timeout: 10s
       retries: 5
     restart: unless-stopped
-
   # Redis
   redis:
     image: redis:7-alpine
@@ -50,45 +47,38 @@ services:
       timeout: 10s
       retries: 5
     restart: unless-stopped
-
   # Backend API
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
       - "4000:4000"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/video2sop
-      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:TBtb0035993!@db:5432/video2sop
       - NODE_ENV=development
-      - PORT=4000
       - CORS_ORIGIN=http://localhost:3000
-      - JWT_SECRET=your-256-bit-secret-key-here
-      - FILE_ENCRYPTION_KEY=your-32-character-encryption-key
-      - ADMIN_TOKEN=your-32-character-admin-token
-      - OPENAI_API_KEY=your-openai-api-key-here
-      - MAX_FILE_SIZE=104857600
-      - JOB_RETENTION_DAYS=7
-      - MAX_CONCURRENT_JOBS=5
-      - RATE_LIMIT_WINDOW=15
-      - RATE_LIMIT_MAX=100
+      - UPLOAD_DIR=./uploads
+      - REDIS_URL=redis://redis:6379
+      - YTDLP_COOKIES_PATH=./cookies.txt
+      - LOG_LEVEL=info
+      - STORAGE_TYPE=local
+      - STORAGE_PATH=./uploads
+    env_file:
+      - .env
     volumes:
-      - backend_uploads:/app/uploads
-      - backend_logs:/app/logs
-      - ./backend/cookies.txt:/app/cookies.txt:ro
+      - /app/node_modules
+      - ./uploads:/app/uploads
+      - ./.env:/app/.env
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "4000"]
       interval: 30s
       timeout: 10s
       retries: 5
     restart: unless-stopped
-
+    depends_on:
+      - db
+      - redis
 volumes:
   postgres_data:
   redis_data:

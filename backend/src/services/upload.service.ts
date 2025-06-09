@@ -9,9 +9,11 @@ import fs from 'fs/promises';
 import { detectVideoFileType } from '../utils/videoProcessor';
 import { Readable } from 'stream';
 import { encryptFile } from '../utils/encryption';
+import { validateEnv } from '../utils/env';
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
-const MAX_FILE_SIZE = Number(process.env.MAX_FILE_SIZE) || 100 * 1024 * 1024; // 100MB default
+const env = validateEnv();
+const UPLOAD_DIR = env.UPLOAD_DIR || 'uploads';
+const MAX_FILE_SIZE = env.MAX_FILE_SIZE; // Already validated and a number
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
 const TEMP_DIR = path.join(UPLOAD_DIR, 'temp');
 const PROCESSED_DIR = path.join(UPLOAD_DIR, 'processed');
