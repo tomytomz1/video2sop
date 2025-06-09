@@ -81,3 +81,8 @@ cookies.txt
 
 # Generated
 generated/
+
+# Large files
+backend/src/tests/test-video.mp4
+backend/src/tests/sample-30s.mp4
+generated/prisma/query_engine-windows.dll.nod
